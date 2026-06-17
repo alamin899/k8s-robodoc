@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: robodoc-backend-production
+  namespace: robodoc
+spec:
+  replicas: 1
+  # Deployment uses revisionHistoryLimit (not historyLimit — that belongs to Jobs/CronJobs etc.)
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app: robodoc-backend-production
+  template:
+    metadata:
+      labels:
+        app: robodoc-backend-production
+    spec:
+      containers:
+        - name: robodoc-backend-production
+          image: registry.digitalocean.com/appnapglobal/apn089-robodoc-backend-prod:k8s
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          envFrom:
+            - configMapRef:
+                name: robodoc-backend-production
+            - secretRef:
+                name: robodoc-backend-production
+          resources:
+            requests:
+              cpu: "400m"
+              memory: "400Mi"
+            limits:
+              cpu: "600m"
+              memory: "612Mi"
+      imagePullSecrets:
+        - name: regcred
+      
+      nodeSelector:
+        kubernetes.io/hostname: worker-1-elasticsearch

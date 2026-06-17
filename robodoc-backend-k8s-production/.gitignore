@@ -1,0 +1,39 @@
+# ============================================================
+# SECRETS & CREDENTIALS — never commit these
+# ============================================================
+
+# Kubernetes secret manifests (contain base64 or plaintext passwords/keys)
+secret.yaml
+configmap.yaml
+regcred.sh
+
+# Environment files
+.env
+.env.*
+*.env
+
+# ============================================================
+# EDITOR & OS
+# ============================================================
+
+# Claude AI settings
+.claude/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# JetBrains / VSCode
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ============================================================
+# TEMP / BUILD
+# ============================================================
+
+*.tmp
+*.bak
+*.log

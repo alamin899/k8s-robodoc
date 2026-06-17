@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: robodoc-prod-redis
+  namespace: robodoc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: robodoc-prod-redis
+  template:
+    metadata:
+      labels:
+        app: robodoc-prod-redis
+    spec:
+      # Same nodes as backend so Redis is not only on control-plane / unrelated nodes.
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - worker-1-elasticsearch
+                      - robodoc-prod-worker-2
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - linux
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          command: ["redis-server"]
+          args: ["--requirepass", "$(REDIS_PASSWORD)"]
+          ports:
+            - containerPort: 6379
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: robodoc-prod-backend-secret
+                  key: REDIS_PASSWORD
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: robodoc-prod-redis-service
+  namespace: robodoc
+spec:
+  type: ClusterIP
+  selector:
+    app: robodoc-prod-redis
+  ports:
+    - protocol: TCP
+      port: 6379
+      targetPort: 6379
