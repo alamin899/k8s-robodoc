@@ -36,5 +36,16 @@ spec:
       imagePullSecrets:
         - name: regcred
       
-      nodeSelector:
-        kubernetes.io/hostname: worker-1-elasticsearch
+      # nodeSelector:
+      #   kubernetes.io/hostname: worker-1-elasticsearch #for single node
+
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - worker-1-elasticsearch
+                      - master-2-monitoring-serve
