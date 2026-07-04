@@ -1,0 +1,23 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: robodoc-customer-route
+  namespace: robodoc
+spec:
+  parentRefs:
+    - name: robodoc-prod
+      namespace: robodoc
+  hostnames:
+    - robodocbd.com
+    - www.robodocbd.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      timeouts:
+        request: 60s
+        backendRequest: 55s
+      backendRefs:
+        - name: robodoc-customer-production
+          port: 3000

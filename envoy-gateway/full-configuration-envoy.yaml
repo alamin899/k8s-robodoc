@@ -48,9 +48,7 @@ spec:
             type: PathPrefix
             value: /
       timeouts:
-        # End-to-end deadline — client gets a 504 if exceeded
         request: 60s
-        # Per-attempt deadline — slightly less than request to allow retry logic
         backendRequest: 55s
       backendRefs:
         - name: robodoc-backend-production

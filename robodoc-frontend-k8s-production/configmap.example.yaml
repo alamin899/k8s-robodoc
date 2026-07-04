@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: robodoc-frontend-production
+  namespace: robodoc
+data:
+  NEXT_PUBLIC_API_BASE_URL: "https://admin.robodocbd.com/api"
+  NEXT_PUBLIC_SERVER: "PROD"
+  NEXT_PUBLIC_SITE_ABSOLUTE_URL: "https://robodocbd.com"
+  NEXT_PUBLIC_GOOGLE_RECAPTCHA_SITE_KEY: ""
+  NEXT_PUBLIC_SENTRY_DSN: ""
+  NEXTAUTH_URL: "https://robodocbd.com"
+  NEXT_PUBLIC_INNOVATION_KIT_ABSOLUTE_URL: ""
+  NEXT_PUBLIC_MIXPANEL_TOKEN: ""
+  NEXT_PUBLIC_GOOGLE_TAG_MANAGER_ID: ""
+  NEXT_PUBLIC_GOOGLE_SITE_VERIFY_ID: ""
+  NEXT_PUBLIC_FB_PIXEL_ID: ""
+  NEXT_PUBLIC_FB_DOMAIN_VERIFY_ID: ""
+  GOOGLE_CLIENT_ID: ""

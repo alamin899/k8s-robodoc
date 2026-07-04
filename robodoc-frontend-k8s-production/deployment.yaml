@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: robodoc-customer-production
+  namespace: robodoc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: robodoc-customer-production
+  template:
+    metadata:
+      labels:
+        app: robodoc-customer-production
+    spec:
+      containers:
+        - name: robodoc-customer-production
+          image: registry.digitalocean.com/appnapglobal/apn089-robodoc-customer-prod:k8s
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: robodoc-customer-production
+            - secretRef:
+                name: robodoc-customer-production
+          resources:
+            requests:
+              cpu: "550m"
+              memory: "550Mi"
+            limits:
+              cpu: "700m"
+              memory: "712Mi"
+      imagePullSecrets:
+        - name: regcred
+      
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - worker-1-elasticsearch
+                      - robodoc-prod-worker-2
+
+
+
+
+
+
+

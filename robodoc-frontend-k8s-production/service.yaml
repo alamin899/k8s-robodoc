@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: robodoc-customer-production
+  namespace: robodoc
+spec:
+  type: ClusterIP
+  selector:
+    app: robodoc-customer-production
+  ports:
+    - protocol: TCP
+      port: 3000           # Service port
+      targetPort: 3000     # Pod container port
