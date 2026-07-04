@@ -8,6 +8,7 @@ spec:
   selector:
     app: robodoc-customer-production
   ports:
-    - protocol: TCP
-      port: 3000           # Service port
-      targetPort: 3000     # Pod container port
+    - name: http
+      protocol: TCP
+      port: 3000
+      targetPort: 3000
