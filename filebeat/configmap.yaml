@@ -1,0 +1,137 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: filebeat-config
+  namespace: robodoc
+  labels:
+    app: filebeat
+data:
+  filebeat.yml: |-
+    ###############################
+    # FILEBEAT INPUTS
+    ###############################
+
+    filebeat.inputs:
+      - type: filestream
+        id: robodoc-backend
+        enabled: true
+
+        # Symlink path — format: {pod-name}_{namespace}_{container-name}-{container-id}.log
+        # Symlinks point to: /var/log/pods/{namespace}_{pod}_{uid}/{container}/{rotation}.log
+        paths:
+          - /var/log/containers/robodoc-backend-production-*_robodoc_*.log
+
+        # Follow symlinks from /var/log/containers/ -> /var/log/pods/
+        prospector.scanner.symlinks: true
+
+        # Parse CRI prefix: "2026-06-17T10:00:00Z stdout F <actual message>"
+        parsers:
+          - container: ~
+
+        fields:
+          log_type: "robodoc-backend"
+        fields_under_root: true
+
+    ###############################
+    # PROCESSORS
+    ###############################
+
+    processors:
+
+      # Tag which node this log came from
+      - add_fields:
+          target: ""
+          fields:
+            node_name: "${NODE_NAME}"
+
+      # Drop empty lines
+      - drop_event:
+          when:
+            equals:
+              message: ""
+
+      # Drop Nginx access log lines (127.0.0.1 - DD/Mon/YYYY ...)
+      - drop_event:
+          when:
+            regexp:
+              message: '^\d+\.\d+\.\d+\.\d+ -\s'
+
+      # Drop OPTIONS preflight requests
+      - drop_event:
+          when:
+            contains:
+              message: '"OPTIONS '
+
+      # Only keep k8s API logs
+      # e.g: [2026-06-18 01:05:10] production.INFO: k8s|http://admin.robodocbd.com/... {...}
+      - drop_event:
+          when:
+            not:
+              contains:
+                message: "k8s|"
+
+      # Extract URL and JSON payload after "k8s|"
+      # Format: [...] production.INFO: k8s|{url} {json_object}
+      - dissect:
+          field: "message"
+          ignore_failure: true
+          target_prefix: ""
+          tokenizer: "%{}k8s|%{api_url} %{json_payload}"
+
+      # Parse JSON string into api.*
+      - decode_json_fields:
+          fields: ["json_payload"]
+          target: "api"
+          overwrite_keys: true
+          process_array: false
+          max_depth: 5
+          add_error_key: true
+
+      # Drop noisy fields
+      - drop_fields:
+          fields:
+            - "json_payload"
+            - "message"
+            - "log.offset"
+            - "stream"
+            - "input.type"
+            - "ecs.version"
+            - "agent.ephemeral_id"
+            - "agent.id"
+            - "agent.type"
+            - "agent.version"
+          ignore_missing: true
+
+    ###############################
+    # OUTPUT
+    ###############################
+
+    output.elasticsearch:
+      hosts: ["http://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}"]
+      username: "${ELASTICSEARCH_USER}"
+      password: "${ELASTICSEARCH_PASSWORD}"
+
+      # Example: kubernetes-robodoc-backend-logs-2026.06
+      index: "kubernetes-%{[log_type]}-logs-%{+yyyy.MM}"
+
+      compression_level: 3
+
+    ###############################
+    # DISABLE TEMPLATE & ILM
+    ###############################
+
+    setup.ilm.enabled: false
+    setup.template.enabled: false
+    setup.template.name: "kubernetes-robodoc"
+    setup.template.pattern: "kubernetes-robodoc-*"
+
+    ###############################
+    # METRICS
+    ###############################
+
+    http.enabled: true
+    http.host: "0.0.0.0"
+    http.port: 5066
+
+    logging.level: info
+    logging.to_files: false
