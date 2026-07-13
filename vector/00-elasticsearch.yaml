@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vector-elasticsearch
+  namespace: logging
+  labels:
+    app: vector
+type: Opaque
+stringData:
+  ELASTICSEARCH_HOST: 174.138.30.43
+  ELASTICSEARCH_PORT: "9200"
+  ELASTICSEARCH_USER: elastic
+  ELASTICSEARCH_PASSWORD: "Amarpet@2026"

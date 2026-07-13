@@ -3,85 +3,136 @@ kind: DaemonSet
 metadata:
   name: vector
   namespace: logging
-
+  labels:
+    app: vector
 spec:
   selector:
     matchLabels:
       app: vector
-
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
   template:
     metadata:
       labels:
         app: vector
-
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: vector
+      terminationGracePeriodSeconds: 60
+      priorityClassName: system-node-critical
+      # Collect logs from every node, including tainted/control-plane nodes.
+      tolerations:
+        - operator: Exists
 
       containers:
       - name: vector
         image: timberio/vector:0.46.1-alpine
+        args:
+          - --config
+          - /etc/vector/vector.yaml
 
         env:
+        - name: VECTOR_SELF_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: VECTOR_SELF_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
         - name: ELASTICSEARCH_HOST
           valueFrom:
-            configMapKeyRef:
-              name: robodoc-backend-production
+            secretKeyRef:
+              name: vector-elasticsearch
               key: ELASTICSEARCH_HOST
-
         - name: ELASTICSEARCH_PORT
           valueFrom:
-            configMapKeyRef:
-              name: robodoc-backend-production
+            secretKeyRef:
+              name: vector-elasticsearch
               key: ELASTICSEARCH_PORT
-
         - name: ELASTICSEARCH_USER
           valueFrom:
-            configMapKeyRef:
-              name: robodoc-backend-production
+            secretKeyRef:
+              name: vector-elasticsearch
               key: ELASTICSEARCH_USER
-
         - name: ELASTICSEARCH_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: robodoc-backend-production
+              name: vector-elasticsearch
               key: ELASTICSEARCH_PASSWORD
+
+        ports:
+          - containerPort: 9090
+            name: metrics
+            protocol: TCP
+
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "192Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+
+        livenessProbe:
+          tcpSocket:
+            port: metrics
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: metrics
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+
+        securityContext:
+          # root needed to read other pods' logs under /var/log/pods
+          runAsUser: 0
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
 
         volumeMounts:
           - name: config
             mountPath: /etc/vector
-
-          - name: varlogcontainers
-            mountPath: /var/log/containers
             readOnly: true
-
+          - name: data
+            mountPath: /var/lib/vector
           - name: varlogpods
             mountPath: /var/log/pods
             readOnly: true
-
+          - name: varlogcontainers
+            mountPath: /var/log/containers
+            readOnly: true
           - name: vardocker
             mountPath: /var/lib/docker/containers
             readOnly: true
-
-          - name: data
-            mountPath: /var/lib/vector
 
       volumes:
         - name: config
           configMap:
             name: vector-config
-
-        - name: varlogcontainers
+        - name: data
           hostPath:
-            path: /var/log/containers
-
+            path: /var/lib/vector-data
+            type: DirectoryOrCreate
         - name: varlogpods
           hostPath:
             path: /var/log/pods
-
+            type: DirectoryOrCreate
+        - name: varlogcontainers
+          hostPath:
+            path: /var/log/containers
+            type: DirectoryOrCreate
         - name: vardocker
           hostPath:
             path: /var/lib/docker/containers
-
-        - name: data
-          hostPath:
-            path: /var/lib/vector
+            type: DirectoryOrCreate

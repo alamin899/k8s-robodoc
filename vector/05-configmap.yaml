@@ -3,7 +3,8 @@ kind: ConfigMap
 metadata:
   name: vector-config
   namespace: logging
-
+  labels:
+    app: vector
 data:
   vector.yaml: |
     data_dir: /var/lib/vector
@@ -11,12 +12,85 @@ data:
     sources:
       kubernetes_logs:
         type: kubernetes_logs
+        extra_field_selector: metadata.namespace=robodoc
+        glob_minimum_cooldown_ms: 1000
+
+      internal_metrics:
+        type: internal_metrics
 
     transforms:
-      ...
-      ...
+      robodoc_backend:
+        type: remap
+        inputs:
+          - kubernetes_logs
+        # Keep pipeline resilient: a bad line is dropped, never crashes Vector.
+        drop_on_abort: true
+        drop_on_error: true
+        source: |
+          pod = to_string(.kubernetes.pod_name) ?? ""
+          if !starts_with(pod, "robodoc-backend-production") { abort }
+
+          msg = to_string(.message) ?? ""
+          if msg == "" { abort }
+          if match(msg, r'^\d+\.\d+\.\d+\.\d+ -\s') { abort }
+          if contains(msg, "\"OPTIONS ") { abort }
+          if !contains(msg, "k8s|") { abort }
+
+          .node_name = get_env_var("VECTOR_SELF_NODE_NAME") ?? ""
+          .log_type = "robodoc-backend"
+
+          # Kibana/Filebeat expect the time field to be "@timestamp".
+          # Vector's default field is "timestamp", so rename it.
+          ."@timestamp" = del(.timestamp)
+
+          # Format after marker: k8s|{url} {json_payload}
+          # "k8s|" is guaranteed present (checked above), so [1] is always set;
+          # string!() asserts the type so the next split is infallible.
+          after = string!(split(msg, "k8s|", limit: 2)[1])
+          parts = split(after, " ", limit: 2)
+          .api_url = parts[0]
+
+          if length(parts) > 1 {
+            parsed, err = parse_json(string!(parts[1]))
+            if err == null { .api = parsed }
+          }
+
+          del(.message)
+          del(.source_type)
+          del(.stream)
+          del(.file)
 
     sinks:
       elasticsearch:
         type: elasticsearch
-        ...
+        inputs:
+          - robodoc_backend
+        endpoints:
+          - "http://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}"
+        auth:
+          strategy: basic
+          user: "${ELASTICSEARCH_USER}"
+          password: "${ELASTICSEARCH_PASSWORD}"
+        healthcheck: false
+        compression: gzip
+        bulk:
+          # e.g. kubernetes-robodoc-backend-logs-2026.06
+          index: "kubernetes-{{ log_type }}-logs-%Y.%m"
+        batch:
+          max_events: 1000
+          timeout_secs: 5
+        request:
+          retry_attempts: 10
+          retry_initial_backoff_secs: 1
+          retry_max_duration_secs: 30
+        # Survive Elasticsearch outages / pod restarts without losing logs.
+        buffer:
+          type: disk
+          max_size: 268435488
+          when_full: block
+
+      prometheus:
+        type: prometheus_exporter
+        inputs:
+          - internal_metrics
+        address: 0.0.0.0:9090
