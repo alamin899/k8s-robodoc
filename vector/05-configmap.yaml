@@ -59,6 +59,7 @@ data:
           del(.source_type)
           del(.stream)
           del(.file)
+          del(.kubernetes)
 
     sinks:
       elasticsearch:
