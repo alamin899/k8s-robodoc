@@ -129,3 +129,10 @@ data:
   WEB_BASIC_AUTH_PASSWORD: ""
   WEB_BASIC_AUTH_USERNAME: ""
   HOST_TYPE: k8s
+  OTEL_SERVICE_NAME: "robodoc-backend"
+  OTEL_TRACES_EXPORTER: "otlp"
+  OTEL_METRICS_EXPORTER: "otlp"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.opentelemetry.svc.cluster.local:4318"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+  OTEL_PHP_AUTOLOAD_ENABLED: "false"
+  OTEL_PHP_DISABLED_INSTRUMENTATIONS: "all"

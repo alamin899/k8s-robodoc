@@ -9,3 +9,12 @@ spec:
     kubernetes:
       envoyService:
         type: NodePort
+  telemetry:
+    tracing:
+      provider:
+        type: OpenTelemetry
+        backendRefs:
+          - name: otel-collector
+            namespace: opentelemetry
+            port: 4317
+      samplingRate: 0

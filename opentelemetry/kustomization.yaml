@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - 00-namespace.yaml
+  - 01-otel-collector-configmap.yaml
+  - 02-otel-collector-deployment.yaml
+  - 03-otel-collector-service.yaml
+  - 04-otel-collector-service-nodeport.yaml
+

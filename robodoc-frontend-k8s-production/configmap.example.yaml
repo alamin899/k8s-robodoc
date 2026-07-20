@@ -17,3 +17,8 @@ data:
   NEXT_PUBLIC_FB_PIXEL_ID: ""
   NEXT_PUBLIC_FB_DOMAIN_VERIFY_ID: ""
   GOOGLE_CLIENT_ID: ""
+  OTEL_SERVICE_NAME: "robodoc-customer-frontend"
+  OTEL_TRACES_EXPORTER: "none"
+  OTEL_METRICS_EXPORTER: "none"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.opentelemetry.svc.cluster.local:4318"
+  OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"

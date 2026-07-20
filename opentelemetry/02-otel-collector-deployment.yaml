@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  namespace: opentelemetry
+  labels:
+    app: otel-collector
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: otel-collector
+
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      terminationGracePeriodSeconds: 30
+
+      containers:
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.156.0
+          imagePullPolicy: IfNotPresent
+
+          args:
+            - --config=/etc/otelcol-contrib/config.yaml
+
+          env:
+            - name: TEMPO_ENDPOINT
+              value: "143.198.138.192:4317"
+
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+              protocol: TCP
+
+            - name: otlp-http
+              containerPort: 4318
+              protocol: TCP
+
+            - name: app-metrics
+              containerPort: 8889
+              protocol: TCP
+
+            - name: int-metrics
+              containerPort: 8888
+              protocol: TCP
+
+            - name: health
+              containerPort: 13133
+              protocol: TCP
+
+          volumeMounts:
+            - name: config
+              mountPath: /etc/otelcol-contrib/config.yaml
+              subPath: otel-collector-config.yaml
+              readOnly: true
+
+          startupProbe:
+            httpGet:
+              path: /
+              port: health
+            periodSeconds: 2
+            failureThreshold: 30
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: health
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: health
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "300m"
+              memory: "512Mi"
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+
+      volumes:
+        - name: config
+          configMap:
+            name: otel-collector-config
+            items:
+              - key: otel-collector-config.yaml
+                path: otel-collector-config.yaml
+
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - worker-1-elasticsearch
+                      - robodoc-prod-worker-2

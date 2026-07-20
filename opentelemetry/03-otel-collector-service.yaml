@@ -1,0 +1,34 @@
+# Applications inside Kubernetes send telemetry through this ClusterIP Service.
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: opentelemetry
+  labels:
+    app: otel-collector
+spec:
+  type: ClusterIP
+
+  selector:
+    app: otel-collector
+
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: otlp-grpc
+      protocol: TCP
+
+    - name: otlp-http
+      port: 4318
+      targetPort: otlp-http
+      protocol: TCP
+
+    - name: app-metrics
+      port: 8889
+      targetPort: app-metrics
+      protocol: TCP
+
+    - name: int-metrics
+      port: 8888
+      targetPort: int-metrics
+      protocol: TCP
