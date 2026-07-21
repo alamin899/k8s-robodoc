@@ -22,3 +22,5 @@ data:
   OTEL_METRICS_EXPORTER: "none"
   OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.opentelemetry.svc.cluster.local:4318"
   OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
+  OTEL_PHP_AUTOLOAD_ENABLED: "false"
+  OTEL_PHP_DISABLED_INSTRUMENTATIONS: "all"
