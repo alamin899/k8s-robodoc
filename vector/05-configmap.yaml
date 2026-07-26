@@ -15,10 +15,48 @@ data:
         extra_field_selector: metadata.namespace=robodoc
         glob_minimum_cooldown_ms: 1000
 
+      envoy_kubernetes_logs:
+        type: kubernetes_logs
+        extra_field_selector: metadata.namespace=envoy-gateway-system
+        glob_minimum_cooldown_ms: 1000
+
       internal_metrics:
         type: internal_metrics
 
     transforms:
+      envoy_gateway:
+        type: remap
+        inputs:
+          - envoy_kubernetes_logs
+        drop_on_abort: true
+        drop_on_error: true
+        source: |
+          pod = to_string(.kubernetes.pod_name) ?? ""
+          container = to_string(.kubernetes.container_name) ?? ""
+          if !contains(pod, "envoy") && !contains(container, "envoy") { abort }
+
+          msg = to_string(.message) ?? ""
+          if msg == "" { abort }
+
+          .node_name = get_env_var("VECTOR_SELF_NODE_NAME") ?? ""
+          .log_type = "envoy-gateway"
+          .service = "envoy"
+
+          ."@timestamp" = del(.timestamp)
+
+          parsed, err = parse_json(msg)
+          if err == null {
+            .envoy = parsed
+          } else {
+            .raw_message = msg
+          }
+
+          del(.message)
+          del(.source_type)
+          del(.stream)
+          del(.file)
+          del(.kubernetes)
+
       robodoc_backend:
         type: remap
         inputs:
@@ -85,6 +123,32 @@ data:
           retry_initial_backoff_secs: 1
           retry_max_duration_secs: 30
         # Survive Elasticsearch outages / pod restarts without losing logs.
+        buffer:
+          type: disk
+          max_size: 268435488
+          when_full: block
+
+      elasticsearch_envoy:
+        type: elasticsearch
+        inputs:
+          - envoy_gateway
+        endpoints:
+          - "http://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}"
+        auth:
+          strategy: basic
+          user: "${ELASTICSEARCH_USER}"
+          password: "${ELASTICSEARCH_PASSWORD}"
+        healthcheck: false
+        compression: gzip
+        bulk:
+          index: "kubernetes-envoy-gateway-logs-%Y.%m"
+        batch:
+          max_events: 1000
+          timeout_secs: 5
+        request:
+          retry_attempts: 10
+          retry_initial_backoff_secs: 1
+          retry_max_duration_secs: 30
         buffer:
           type: disk
           max_size: 268435488
