@@ -3,8 +3,7 @@ kind: Application
 metadata:
   name: robodoc-backend
   namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
+  # No finalizer: deleting this Application from Argo CD will keep your backend pods/services running in robodoc namespace
   labels:
     app.kubernetes.io/name: robodoc-backend
     app.kubernetes.io/part-of: robodoc
