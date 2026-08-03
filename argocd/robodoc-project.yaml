@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: robodoc
+  namespace: argocd
+spec:
+  description: Robodoc Production Applications
+  sourceRepos:
+    - "https://github.com/alamin899/k8s-robodoc.git"
+    - "git@github.com:alamin899/k8s-robodoc.git"
+  destinations:
+    - namespace: robodoc
+      server: https://kubernetes.default.svc
+    - namespace: envoy-gateway-system
+      server: https://kubernetes.default.svc
+    - namespace: opentelemetry
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

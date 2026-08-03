@@ -13,7 +13,6 @@ robodoc-backend-k8s-production/
 ├── service.yaml                 # ClusterIP Service (port 80)
 ├── configmap.yaml               # App environment variables  ← gitignored
 ├── secret.yaml                  # App secrets & passwords    ← gitignored
-├── redis.yaml                   # Redis Deployment + Service
 ├── regcred.sh                   # Registry pull secret setup ← gitignored
 │
 ├── filebeat-configmap.yaml      # Filebeat configuration

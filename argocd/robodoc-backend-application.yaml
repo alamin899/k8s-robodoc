@@ -1,0 +1,53 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: robodoc-backend
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/name: robodoc-backend
+    app.kubernetes.io/part-of: robodoc
+    app.kubernetes.io/component: backend
+spec:
+  project: robodoc
+  source:
+    repoURL: https://github.com/alamin899/k8s-robodoc.git
+    targetRevision: HEAD
+    path: robodoc-backend-k8s-production
+    directory:
+      recurse: false
+      # Exclude *.example.yaml files so Argo CD does not overwrite production ConfigMaps/Secrets
+      exclude: '*.example.yaml'
+  # Ignore external Secret & ConfigMap so Argo CD never flags or overwrites manually applied production secrets
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      name: robodoc-backend-production
+      namespace: robodoc
+      jsonPointers:
+        - /data
+        - /metadata
+    - group: ""
+      kind: ConfigMap
+      name: robodoc-backend-production
+      namespace: robodoc
+      jsonPointers:
+        - /data
+        - /metadata
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: robodoc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
