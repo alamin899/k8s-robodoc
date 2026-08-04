@@ -4,7 +4,7 @@ metadata:
   name: robodoc-customer-production
   namespace: robodoc
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: robodoc-customer-production
