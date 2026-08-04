@@ -1,6 +1,6 @@
 # Argo CD GitOps Configuration for Robodoc
 
-This directory contains Declarative GitOps configuration manifests for managing the **Robodoc Backend** microservice on Kubernetes using [Argo CD](https://argoproj.github.io/cd/).
+This directory contains Declarative GitOps configuration manifests for managing the **Robodoc Backend** and **Robodoc Customer (Frontend)** microservices on Kubernetes using [Argo CD](https://argoproj.github.io/cd/).
 
 ---
 
@@ -9,6 +9,7 @@ This directory contains Declarative GitOps configuration manifests for managing 
 | File | Type | Description |
 |---|---|---|
 | [`robodoc-backend-application.yaml`](file:///Users/test/Documents/practice/kubernetes/k8s-robodoc/argocd/robodoc-backend-application.yaml) | `Application` | Configures Argo CD to sync `robodoc-backend-k8s-production/` from GitHub into the `robodoc` namespace. |
+| [`robodoc-customer-application.yaml`](file:///Users/test/Documents/practice/kubernetes/k8s-robodoc/argocd/robodoc-customer-application.yaml) | `Application` | Configures Argo CD to sync `robodoc-frontend-k8s-production/` from GitHub into the `robodoc` namespace. |
 | [`robodoc-project.yaml`](file:///Users/test/Documents/practice/kubernetes/k8s-robodoc/argocd/robodoc-project.yaml) | `AppProject` | Optional dedicated Argo CD Project (`robodoc`) defining repository, namespace, and resource whitelists. |
 
 ---
@@ -52,38 +53,38 @@ Now open `https://localhost:8080` in your web browser and log in with username `
 
 ### 3. Apply the Argo CD Manifests (AppProject & Application)
 
-By default, [robodoc-backend-application.yaml](file:///Users/test/Documents/practice/kubernetes/k8s-robodoc/argocd/robodoc-backend-application.yaml) is configured to use the `robodoc` project (`project: robodoc`) defined in [robodoc-project.yaml](file:///Users/test/Documents/practice/kubernetes/k8s-robodoc/argocd/robodoc-project.yaml).
+By default, [robodoc-backend-application.yaml](file:///Users/test/Documents/practice/kubernetes/k8s-robodoc/argocd/robodoc-backend-application.yaml) and [robodoc-customer-application.yaml](file:///Users/test/Documents/practice/kubernetes/k8s-robodoc/argocd/robodoc-customer-application.yaml) are configured to use the `robodoc` project (`project: robodoc`) defined in [robodoc-project.yaml](file:///Users/test/Documents/practice/kubernetes/k8s-robodoc/argocd/robodoc-project.yaml).
 
-Apply **both files** in the `argocd/` folder together so that Argo CD registers the project and application:
+Apply **all manifests** in the `argocd/` folder together so that Argo CD registers the project and both applications:
 
 ```bash copy
-kubectl apply -f argocd/robodoc-project.yaml -f argocd/robodoc-backend-application.yaml
+kubectl apply -f argocd/robodoc-project.yaml -f argocd/robodoc-backend-application.yaml -f argocd/robodoc-customer-application.yaml
 # OR apply all YAML manifests in the argocd folder at once:
 kubectl apply -f argocd/
 ```
 
 > [!TIP]
-> If you prefer using the `default` Argo CD project instead of the custom `robodoc` project, change `project: robodoc` to `project: default` in [robodoc-backend-application.yaml](file:///Users/test/Documents/practice/kubernetes/k8s-robodoc/argocd/robodoc-backend-application.yaml) and apply only the application file:
+> If you prefer using the `default` Argo CD project instead of the custom `robodoc` project, change `project: robodoc` to `project: default` in the application YAMLs and apply only the application files:
 > ```bash copy
-> kubectl apply -f argocd/robodoc-backend-application.yaml
+> kubectl apply -f argocd/robodoc-backend-application.yaml -f argocd/robodoc-customer-application.yaml
 > ```
 
-Once applied, Argo CD will register the application under the `robodoc` project and begin syncing the backend resources from GitHub (`https://github.com/alamin899/k8s-robodoc.git`, directory `robodoc-backend-k8s-production/`) into the `robodoc` namespace.
+Once applied, Argo CD will register both applications under the `robodoc` project and begin syncing the backend and customer resources from GitHub (`https://github.com/alamin899/k8s-robodoc.git`, directories `robodoc-backend-k8s-production/` and `robodoc-frontend-k8s-production/`) into the `robodoc` namespace.
 
 ---
 
 ## Key Configuration Details
 
 ### 1. Excluding Template / Example Files
-Within [`robodoc-backend-k8s-production`](file:///Users/test/Documents/practice/kubernetes/k8s-robodoc/robodoc-backend-k8s-production), template files (`configmap.example.yaml` and `secret.example.yaml`) are tracked in Git, whereas production secrets are gitignored.
+Within [`robodoc-backend-k8s-production`](file:///Users/test/Documents/practice/kubernetes/k8s-robodoc/robodoc-backend-k8s-production) and [`robodoc-frontend-k8s-production`](file:///Users/test/Documents/practice/kubernetes/k8s-robodoc/robodoc-frontend-k8s-production), template files (`configmap.example.yaml` and `secret.example.yaml`) are tracked in Git, whereas production secrets are gitignored.
 
-To prevent Argo CD from applying `configmap.example.yaml` and `secret.example.yaml` (which contain empty values) over real production configurations, the Application manifest explicitly excludes them:
+To prevent Argo CD from applying `configmap.example.yaml` and `secret.example.yaml` (which contain empty values) over real production configurations, the Application manifests explicitly exclude them:
 
 ```yaml copy
 source:
   repoURL: https://github.com/alamin899/k8s-robodoc.git
   targetRevision: HEAD
-  path: robodoc-backend-k8s-production
+  path: robodoc-backend-k8s-production # (or robodoc-frontend-k8s-production)
   directory:
     recurse: false
     exclude: '*.example.yaml'
@@ -94,7 +95,7 @@ Because `configmap.yaml`, `secret.yaml`, and registry credentials (`regcred`) ar
 - **Manually**: Running `./deploy.sh` or applying `kubectl apply -f secret.yaml -f configmap.yaml` once during initial setup.
 - **GitOps Secrets Manager**: Using [Sealed Secrets](https://github.com/bitnami-labs/sealed-secrets) or [External Secrets Operator](https://external-secrets.io/) to generate Kubernetes secrets automatically.
 
-To guarantee that Argo CD never overwrites, prunes, or flags your manually applied `robodoc-backend-production` Secret and ConfigMap as out-of-sync, the Application manifest explicitly configures `ignoreDifferences` for them.
+To guarantee that Argo CD never overwrites, prunes, or flags your manually applied production Secrets and ConfigMaps (`robodoc-backend-production` and `robodoc-customer-production`) as out-of-sync, both Application manifests explicitly configure `ignoreDifferences` for them.
 
 ### 3. Automated Sync & Self-Healing
 The Application is configured with automated synchronization:
@@ -116,43 +117,46 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.pas
 kubectl port-forward svc/argocd-server -n argocd 8080:443
 ```
 
-### Check Application Status
+### Check Application Statuses
 ```bash copy
-kubectl get application robodoc-backend -n argocd
+kubectl get applications -n argocd
 ```
 
 ### View Application Details & Sync Conditions
 ```bash copy
 kubectl describe application robodoc-backend -n argocd
+kubectl describe application robodoc-customer -n argocd
 ```
 
 ### Manually Trigger a Refresh / Sync via CLI (if `argocd` CLI is installed)
 ```bash copy
-argocd app sync robodoc-backend
+argocd app sync robodoc-backend robodoc-customer
 argocd app get robodoc-backend
+argocd app get robodoc-customer
 ```
 
 ---
 
 ## Removing / Uninstalling from Kubernetes
 
-### 1. Remove the Argo CD Application (`robodoc-backend`)
+### 1. Remove the Argo CD Applications (`robodoc-backend` and `robodoc-customer`)
 
-#### Option A: Cascading Delete (Delete Application + All Deployed Backend Resources)
-Because [robodoc-backend-application.yaml](file:///Users/test/Documents/practice/kubernetes/k8s-robodoc/argocd/robodoc-backend-application.yaml) includes the `resources-finalizer.argocd.argoproj.io` finalizer, deleting the Application will automatically delete all managed resources in the `robodoc` namespace:
+#### Option A: Cascading Delete (Delete Application + All Deployed Resources)
+Because the application manifests can include the `resources-finalizer.argocd.argoproj.io` finalizer, deleting the Applications will automatically delete all managed resources in the `robodoc` namespace:
 
 ```bash copy
-kubectl delete -f argocd/robodoc-backend-application.yaml
+kubectl delete -f argocd/robodoc-backend-application.yaml -f argocd/robodoc-customer-application.yaml
 # OR
-kubectl delete application robodoc-backend -n argocd
+kubectl delete applications robodoc-backend robodoc-customer -n argocd
 ```
 
-#### Option B: Non-Cascading Delete (Remove Application from Argo CD, Keep Backend Running)
-If you want to remove the application from Argo CD but **keep** your backend pods and services running in Kubernetes, strip the finalizer before deleting:
+#### Option B: Non-Cascading Delete (Remove Application from Argo CD, Keep Resources Running)
+If you want to remove the applications from Argo CD but **keep** your pods and services running in Kubernetes, strip any finalizers before deleting:
 
 ```bash copy
 kubectl patch application robodoc-backend -n argocd --type=json -p='[{"op": "remove", "path": "/metadata/finalizers"}]'
-kubectl delete application robodoc-backend -n argocd
+kubectl patch application robodoc-customer -n argocd --type=json -p='[{"op": "remove", "path": "/metadata/finalizers"}]'
+kubectl delete applications robodoc-backend robodoc-customer -n argocd
 ```
 
 ---

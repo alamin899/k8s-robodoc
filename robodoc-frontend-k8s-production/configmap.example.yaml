@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: robodoc-frontend-production
+  name: robodoc-customer-production
   namespace: robodoc
 data:
   NEXT_PUBLIC_API_BASE_URL: "https://admin.robodocbd.com/api"
