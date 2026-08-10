@@ -4,7 +4,7 @@ metadata:
   name: robodoc-backend-production
   namespace: robodoc
 spec:
-  replicas: 1
+  replicas: 2
   # Deployment uses revisionHistoryLimit (not historyLimit — that belongs to Jobs/CronJobs etc.)
   revisionHistoryLimit: 1
   selector:
