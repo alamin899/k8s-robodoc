@@ -6,7 +6,7 @@ metadata:
 spec:
   replicas: 2
   # Deployment uses revisionHistoryLimit (not historyLimit — that belongs to Jobs/CronJobs etc.)
-  revisionHistoryLimit: 1
+  #revisionHistoryLimit: 1 #Keep my current Deployment revision plus only 1 old revision for rollback.
   selector:
     matchLabels:
       app: robodoc-backend-production
